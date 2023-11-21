@@ -80,4 +80,4 @@ realTimeClock=ttk.Label(text=getTimeNow('hms'),font=('Arial BOLD',20))
 realTimeClock.pack(pady=[0,20])
 realTimeClock.after(1000,updateClock)
 
-root.mainloop(]
+root.mainloop()
