@@ -27,10 +27,51 @@ frame.pack()
 widgets_frame=ttk.LabelFrame(frame,text="Manage")
 widgets_frame.grid(row=0,column=0,padx=[10,5],pady=10,sticky="n")
 
-buttonTimeIn=ttk.Button(widgets_frame,text="Time In")
+def renderModal(variant):
+    modal=tk.Tk()
+    modal.title(f"{variant} Modal")
+    style=ttk.Style(modal)
+    modal.tk.call("source","forest-light.tcl")
+    modal.tk.call("source","forest-dark.tcl")
+    style.theme_use("forest-dark")
+    modal.resizable(False,False)
+
+    modalFrame=ttk.Frame(modal)
+    modalFrame.pack()
+
+    modalWidgetsFrame=ttk.LabelFrame(modalFrame,text=variant)
+    modalWidgetsFrame.grid(row=0,column=0,padx=20,pady=20)
+
+    e_idEntry=ttk.Entry(modalWidgetsFrame)
+    e_idEntry.insert(0,"E-ID")
+    e_idEntry.bind("<FocusIn>",lambda e: e_idEntry.delete('0','end'))
+    e_idEntry.grid(row=0,column=0,padx=10,pady=[10,5],sticky="ew")
+
+    passwordEntry=ttk.Entry(modalWidgetsFrame)
+    passwordEntry.insert(0,"Password")
+    passwordEntry.bind("<FocusIn>",lambda e: passwordEntry.delete('0','end'))
+    passwordEntry.grid(row=1,column=0,padx=10,pady=[0,5],sticky="ew")
+
+    timeEntry=ttk.Entry(modalWidgetsFrame)
+    timeEntry.insert(0,getTimeNow('hm'))
+    timeEntry.grid(row=2,column=0,padx=10,pady=[0,5],sticky="ew")
+    timeEntry.config(state="disabled")
+
+    submitBtn=ttk.Button(modalWidgetsFrame,text='Submit',command=lambda: submit(modal,variant,str(e_idEntry.get()),str(passwordEntry.get()),str(timeEntry.get())))
+    submitBtn.grid(row=4,column=0,padx=10,pady=[0,5],sticky="nsew")
+
+def submit(modal,variant,e_id,password,time):
+    print(e_id,password,time)
+    if not(e_id and e_id.strip()) or not(password and password.strip()) or e_id=='E-ID' or password=='Password':
+        messagebox.showwarning("","Please fill up all entries")
+        return
+    modal.destroy()
+
+
+buttonTimeIn=ttk.Button(widgets_frame,text="Time In",command=lambda: renderModal("Time-In"))
 buttonTimeIn.grid(row=0,column=0,padx=10,pady=[10,5],sticky="nsew")
 
-buttonTimeOut=ttk.Button(widgets_frame,text="Time Out")
+buttonTimeOut=ttk.Button(widgets_frame,text="Time Out",command=lambda: renderModal("Time-Out"))
 buttonTimeOut.grid(row=1,column=0,padx=10,pady=[0,5],sticky="nsew")
 
 buttonExcel=ttk.Button(widgets_frame,text="Download Excel")
