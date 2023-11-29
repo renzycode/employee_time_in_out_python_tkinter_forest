@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import pymysql
 import datetime
 from tkinter import messagebox
 
@@ -11,6 +12,86 @@ def getTimeNow(variant):
     return time
 
 print(getTimeNow('hm'))
+
+def connection():
+    try: 
+        conn=pymysql.connect(
+            host='localhost',
+            user='root',
+            password='',
+            db='time_in_out_system'
+        )
+        return conn
+    except Exception as e:
+        print('error: '+e)
+        exit()
+
+conn=connection()
+cursor=conn.cursor()
+
+def refreshTable():
+    for data in treeview.get_children():
+        treeview.delete(data)
+    for array in read():
+        treeview.insert('',tk.END,values=array[1:],iid=array[0])
+        print(array)
+    treeview.pack()
+
+def read():
+    cursor.connection.ping()
+    sql="SELECT `id`,`e_id`,`name`,`time_in`,`time_out` FROM time_in_out ORDER BY `id` DESC"
+    cursor.execute(sql)
+    results=cursor.fetchall()
+    conn.commit()
+    conn.close()
+    return results
+
+def save(variant,e_id,password,time):
+    cursor.connection.ping()
+    sql=f"SELECT * FROM employee WHERE e_id='{e_id}' AND password='{password}'"
+    cursor.execute(sql)
+    result=cursor.fetchone()
+    conn.commit()
+    conn.close()
+    if not result:
+        messagebox.showwarning("","Wrong employee id or password")
+        return False
+    name=result[2]
+    cursor.connection.ping()
+    sql=f"SELECT * FROM time_in_out WHERE e_id='{e_id}'"
+    cursor.execute(sql)
+    result=cursor.fetchone()
+    conn.commit()
+    conn.close()
+    if variant=='Time-In':
+        if result:
+            if result[4]=='----':
+                messagebox.showwarning("","You're already in")
+                return True
+        try:
+            cursor.connection.ping()
+            sql=f"INSERT INTO time_in_out (`e_id`,`name`,`time_in`,`time_out`) values ('{e_id}','{name}','{time}','----')"
+            cursor.execute(sql)
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            messagebox.showwarning("","Error while time in :"+e)
+        refreshTable()
+    else:
+        if result:
+            if result[4]!='----':
+                messagebox.showwarning("","You're already out")
+                return True
+        try:
+            cursor.connection.ping()
+            sql=f"UPDATE time_in_out SET `time_out`='{time}' WHERE `e_id`='{e_id}'"
+            cursor.execute(sql)
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            messagebox.showwarning("","Error while time out :"+e)
+        refreshTable()
+    return True
 
 root=tk.Tk()
 root.title("Employee Time-In-Out System")
@@ -65,8 +146,8 @@ def submit(modal,variant,e_id,password,time):
     if not(e_id and e_id.strip()) or not(password and password.strip()) or e_id=='E-ID' or password=='Password':
         messagebox.showwarning("","Please fill up all entries")
         return
-    modal.destroy()
-
+    if save(variant,e_id,password,time):
+        modal.destroy()
 
 buttonTimeIn=ttk.Button(widgets_frame,text="Time In",command=lambda: renderModal("Time-In"))
 buttonTimeIn.grid(row=0,column=0,padx=10,pady=[10,5],sticky="nsew")
@@ -97,20 +178,7 @@ treeview.column("Name",width=110)
 treeview.column("Time In",width=70)
 treeview.column("Time Out",width=70)
 
-myArray=[
-    [1,'e-1234','carlo','8:20 AM','6:00 PM'],
-    [2,'e-1245','shaun','8:01 AM','5:40 PM'],
-    [3,'e-2257','miguel','7:20 AM','6:30 PM'],
-    [4,'e-7741','joseph','7:54 AM','5:22 PM']
-]
-
-for data in treeview.get_children():
-    treeview.delete(data)
-for array in myArray:
-    treeview.insert('',tk.END,values=array[1:],iid=array[0])
-    print(array)
-
-treeview.pack()
+refreshTable()
 treeScroll.config(command=treeview.yview)
 
 def updateClock():
