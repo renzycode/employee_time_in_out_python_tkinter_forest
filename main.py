@@ -3,6 +3,7 @@ from tkinter import ttk
 import pymysql
 import datetime
 from tkinter import messagebox
+import csv
 
 def getTimeNow(variant):
     if variant=='hms':
@@ -58,7 +59,7 @@ def save(variant,e_id,password,time):
         return False
     name=result[2]
     cursor.connection.ping()
-    sql=f"SELECT * FROM time_in_out WHERE e_id='{e_id}'"
+    sql=f"SELECT * FROM time_in_out WHERE e_id='{e_id}' AND time_out='----'"
     cursor.execute(sql)
     result=cursor.fetchone()
     conn.commit()
@@ -66,7 +67,7 @@ def save(variant,e_id,password,time):
     if variant=='Time-In':
         if result:
             if result[4]=='----':
-                messagebox.showwarning("","You're already in")
+                messagebox.showwarning("","You're already time in")
                 return True
         try:
             cursor.connection.ping()
@@ -78,10 +79,9 @@ def save(variant,e_id,password,time):
             messagebox.showwarning("","Error while time in :"+e)
         refreshTable()
     else:
-        if result:
-            if result[4]!='----':
-                messagebox.showwarning("","You're already out")
-                return True
+        if not result:
+            messagebox.showwarning("","You're not yet time in")
+            return True
         try:
             cursor.connection.ping()
             sql=f"UPDATE time_in_out SET `time_out`='{time}' WHERE `e_id`='{e_id}'"
@@ -92,6 +92,34 @@ def save(variant,e_id,password,time):
             messagebox.showwarning("","Error while time out :"+e)
         refreshTable()
     return True
+
+def exportExcel():
+    cursor.connection.ping()
+    sql="SELECT `e_id`,`name`,`time_in`,`time_out` FROM time_in_out ORDER BY `id` DESC"
+    cursor.execute(sql)
+    dataraw=cursor.fetchall()
+    conn.commit()
+    conn.close()
+    date=str(datetime.datetime.now())
+    date=date.replace(' ','_')
+    date=date.replace(':','-')
+    dateFinal=date[0:16]
+    with open("time_in_out_"+dateFinal+".csv",'a',newline='') as f:
+        w=csv.writer(f,dialect='excel')
+        for record in dataraw:
+            w.writerow(record)
+    print("saved: time_in_out_"+dateFinal+".csv")
+    messagebox.showinfo("","Excel file downloaded")
+
+def clear():
+    delete=messagebox.askyesno("","Are you sure you want to delete all records?")
+    if delete:
+        cursor.connection.ping()
+        sql=f"DELETE FROM time_in_out"
+        cursor.execute(sql)
+        conn.commit()
+        conn.close()
+    refreshTable()
 
 root=tk.Tk()
 root.title("Employee Time-In-Out System")
@@ -155,10 +183,10 @@ buttonTimeIn.grid(row=0,column=0,padx=10,pady=[10,5],sticky="nsew")
 buttonTimeOut=ttk.Button(widgets_frame,text="Time Out",command=lambda: renderModal("Time-Out"))
 buttonTimeOut.grid(row=1,column=0,padx=10,pady=[0,5],sticky="nsew")
 
-buttonExcel=ttk.Button(widgets_frame,text="Download Excel")
+buttonExcel=ttk.Button(widgets_frame,text="Download Excel",command=exportExcel)
 buttonExcel.grid(row=2,column=0,padx=10,pady=[0,5],sticky="nsew")
 
-buttonClear=ttk.Button(widgets_frame,text="Clear Data")
+buttonClear=ttk.Button(widgets_frame,text="Clear Data",command=clear)
 buttonClear.grid(row=3,column=0,padx=10,pady=[0,5],sticky="nsew")
 
 treeFrame=ttk.Frame(frame)
